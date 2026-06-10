@@ -54,7 +54,7 @@ Open http://localhost:3000.
 | Source | Data | Refresh |
 |---|---|---|
 | Yahoo Finance (free chart API) | ~62 instruments: ACWI benchmark, 10 regions, 11 sectors, 6 styles, 7 bond classes, 5 commodities, 5 FX pairs, VIX/rates/BTC, plus the next 12 monthly **fed funds futures** contracts | quotes **60s**, full 1y history 10min |
-| FRED (public CSV, no key) | CPI & core CPI (y/y), unemployment, payrolls, **jobless claims**, **industrial production**, fed funds, **ECB deposit rate**, 10y–2y curve, HY credit spreads, consumer sentiment, **5y/10y inflation breakevens + 5y5y forward** | 6h (data is daily/weekly/monthly) |
+| FRED (public CSV, no key) | CPI & core CPI (y/y), unemployment, payrolls, **jobless claims**, **industrial production**, **policy stance for Fed / ECB / BoE / BoJ**, 10y–2y curve, HY credit spreads, consumer sentiment, **5y/10y inflation breakevens + 5y5y forward**, **euro-area HICP & UK CPI (y/y)** | 6h (data is daily/weekly/monthly) |
 | RSS (BBC World, CNBC, MarketWatch, Yahoo Finance, Guardian Business) | Top worldwide headlines with keyword sentiment + region/sector tagging | 5min |
 | Claude API (optional, needs `ANTHROPIC_API_KEY`) | LLM news layer: structured event extraction, market-impact call, per-bucket sentiment | with news (throttled to 15min locally) |
 
@@ -62,16 +62,25 @@ The frontend polls the server every 30s with a live countdown. If a source is
 unreachable the dashboard keeps the last good data and surfaces the error in the
 header; if nothing is reachable at boot it falls back to clearly-badged demo data.
 
-### Policy path & inflation expectations monitors
+### Central banks & inflation monitors
 
 - **Fed implied policy path** — implied rate (100 − price) from the strip of
   30-day fed funds futures (ZQ, CME) out 12 months, vs the current effective
   rate. The bp of cuts/hikes priced in shows up as a regime signal and feeds a
   small duration tilt (deep easing priced → duration tailwind, hikes priced →
   headwind).
-- **Inflation forwards** — 5y and 10y TIPS breakevens plus the **5y5y forward**
-  (the Fed's preferred gauge of long-run anchoring). Levels vs the 2% target
-  and the 3-month repricing feed the regime's inflation score alongside CPI.
+- **Policy stance — Fed / ECB / BoE / BoJ** — current policy rate and delivered
+  moves over the last 6 months (FEDFUNDS, ECB deposit rate, daily SONIA, BoJ
+  overnight call rate). Easing/tightening cycles feed small region tilts
+  (ECB cutting → Europe tailwind, BoJ hiking → Japan headwind). Market-implied
+  *paths* need €STR/SONIA/TONA futures, which have no free feed — the
+  futures-implied path is Fed-only; stale series are greyed out and excluded
+  from the engine.
+- **Inflation — market-implied & realized** — 5y and 10y TIPS breakevens plus
+  the **5y5y forward** (the Fed's preferred gauge of long-run anchoring) feed
+  the regime's inflation score; realized CPI y/y is shown for the US, euro
+  area (HICP) and UK. Inflation swaps outside the US and a live free Japan
+  monthly CPI feed don't exist, so coverage is honest about its limits.
 
 ### LLM news layer (optional)
 

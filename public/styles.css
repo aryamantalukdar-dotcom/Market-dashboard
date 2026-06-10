@@ -31,9 +31,40 @@ body {
   padding: 14px 22px;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
+}
+
+/* Tab navigation (sticky so sections are always one tap away) */
+.tabs {
   position: sticky;
   top: 0;
   z-index: 10;
+  display: flex;
+  gap: 4px;
+  padding: 8px 22px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab-btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text); background: var(--panel2); }
+.tab-btn.active {
+  color: var(--blue);
+  background: rgba(88,166,255,.12);
+  border-color: rgba(88,166,255,.4);
 }
 
 .brand h1 { font-size: 18px; }
@@ -95,9 +126,30 @@ h2 { font-size: 16px; margin-bottom: 12px; }
 .gauge .g-val { font-size: 17px; font-weight: 700; }
 .gauge .g-chg { font-size: 12px; }
 
-/* Policy path & inflation expectations */
+/* Central banks & inflation */
 .policy-row { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; }
+.policy-wide { grid-column: 1 / -1; }
 @media (max-width: 1000px) { .policy-row { grid-template-columns: 1fr; } }
+
+.stance-rows { display: flex; flex-direction: column; gap: 6px; }
+.stance-row {
+  display: grid;
+  grid-template-columns: 110px 64px 1fr 90px;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+}
+.stance-row.stale { opacity: .55; }
+.st-bank { font-weight: 700; }
+.st-region { display: block; font-weight: 400; font-size: 10.5px; color: var(--muted); }
+.st-rate { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.st-dir { font-size: 11.5px; }
+.st-spark .sparkline { height: 22px; margin-top: 0; }
+.infl-sub { margin: 8px 0 6px; text-transform: uppercase; letter-spacing: .5px; font-size: 10.5px; }
+.gauge.stale { opacity: .55; }
 .panel-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
 .policy-summary { font-size: 13px; margin-bottom: 10px; }
 .policy-bars { display: flex; flex-direction: column; gap: 4px; }
@@ -236,6 +288,10 @@ footer { padding: 16px 22px 30px; color: var(--muted); font-size: 11.5px; max-wi
 /* ----------------------- Mobile (phones) ----------------------- */
 @media (max-width: 700px) {
   .topbar { padding: 10px 14px; }
+  .tabs { padding: 6px 10px; }
+  .tab-btn { padding: 6px 12px; font-size: 12.5px; }
+  .stance-row { grid-template-columns: 90px 56px 1fr; }
+  .st-spark { display: none; }
   .topbar-right { flex-basis: 100%; justify-content: space-between; }
   .brand h1 { font-size: 16px; }
   .subtitle { display: block; margin-top: 2px; }
