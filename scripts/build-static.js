@@ -24,7 +24,11 @@ const MOCK = process.env.MOCK === '1';
 
 let history = {};
 let log = [];
-const prevUrl = process.env.PREVIOUS_DATA_URL;
+let prevUrl = process.env.PREVIOUS_DATA_URL;
+if (!prevUrl && process.env.GITHUB_REPOSITORY) {
+  const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+  prevUrl = `https://${owner}.github.io/${repo}/data.json`;
+}
 if (prevUrl && !MOCK) {
   try {
     const res = await fetch(prevUrl, { headers: { 'Cache-Control': 'no-cache' } });
