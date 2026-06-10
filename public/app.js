@@ -25,6 +25,48 @@ async function fetchPayload() {
 
 const $ = (id) => document.getElementById(id);
 
+/* ------------------------------ tabs --------------------------------- */
+
+const TABS = [
+  ['overview', 'Overview'],
+  ['tilts', 'Tilts'],
+  ['markets', 'Markets'],
+  ['macro', 'Macro'],
+  ['news', 'News']
+];
+const SECTION_TABS = {
+  'regime-section': 'overview',
+  'policy-section': 'overview',
+  'reco-section': 'tilts',
+  'backtest-section': 'tilts',
+  'log-section': 'tilts',
+  'markets-section': 'markets',
+  'macro-section': 'macro',
+  'news-section': 'news'
+};
+let activeTab = TABS.some(([k]) => k === location.hash.slice(1)) ? location.hash.slice(1) : 'overview';
+
+function applyTab() {
+  for (const [id, tab] of Object.entries(SECTION_TABS)) {
+    $(id).style.display = tab === activeTab ? '' : 'none';
+  }
+  document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === activeTab));
+}
+
+function initTabs() {
+  $('tabs').innerHTML = TABS.map(([k, label]) =>
+    `<button class="tab-btn" data-tab="${k}" type="button">${label}</button>`).join('');
+  $('tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('.tab-btn');
+    if (!b) return;
+    activeTab = b.dataset.tab;
+    history.replaceState(null, '', `#${activeTab}`);
+    applyTab();
+    window.scrollTo({ top: 0 });
+  });
+  applyTab();
+}
+
 function fmt(n, digits = 2) {
   if (n == null || !Number.isFinite(n)) return '–';
   return n.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -112,13 +154,44 @@ function renderRegime(p) {
   }).join('')}</div>`;
 }
 
+const CENTRAL_BANKS = [
+  { id: 'FEDFUNDS', bank: 'Fed', region: 'United States', note: 'effective fed funds' },
+  { id: 'ECBDFR', bank: 'ECB', region: 'Euro area', note: 'deposit facility' },
+  { id: 'IUDSOIA', bank: 'BoE', region: 'United Kingdom', note: 'SONIA overnight' },
+  { id: 'IRSTCI01JPM156N', bank: 'BoJ', region: 'Japan', note: 'overnight call rate' }
+];
+
+const isStale = (m, days = 400) =>
+  m?.latestDate && Date.now() - Date.parse(m.latestDate) > days * 86400 * 1000;
+
 function renderPolicy(p) {
   const sec = $('policy-section');
   const pol = p.policy;
   const inflIds = [['T5YIE', '5y breakeven'], ['T10YIE', '10y breakeven'], ['T5YIFR', '5y5y forward']];
   const haveInfl = inflIds.some(([id]) => p.macro?.[id]);
-  if (!pol?.path?.length && !haveInfl) { sec.classList.add('hidden'); return; }
+  const haveStance = CENTRAL_BANKS.some((b) => p.macro?.[b.id]);
+  if (!pol?.path?.length && !haveInfl && !haveStance) { sec.classList.add('hidden'); return; }
   sec.classList.remove('hidden');
+
+  $('stance-card').innerHTML = `
+    <div class="panel-title">Policy stance — major central banks</div>
+    <div class="stance-rows">${CENTRAL_BANKS.map((b) => {
+      const m = p.macro?.[b.id];
+      if (!m || m.latest == null) {
+        return `<div class="stance-row muted"><span class="st-bank">${b.bank}</span><span class="st-note">${b.note} — unavailable</span></div>`;
+      }
+      const stale = isStale(m);
+      const chg = m.change6m != null ? Math.round(m.change6m * 100) : null;
+      const dir = chg == null ? '' : chg <= -10 ? `cut ${Math.abs(chg)}bp / 6m` : chg >= 10 ? `hiked ${chg}bp / 6m` : 'on hold';
+      const dirCls = chg == null ? '' : chg <= -10 ? 'pos' : chg >= 10 ? 'neg' : 'muted';
+      return `<div class="stance-row${stale ? ' stale' : ''}">
+        <span class="st-bank">${b.bank}<span class="st-region">${esc(b.region)}</span></span>
+        <span class="st-rate">${fmt(m.latest)}%</span>
+        <span class="st-dir ${dirCls}">${dir}${stale ? ' · stale data' : ''}</span>
+        <span class="st-spark">${sparkline(m.spark, { height: 22 })}</span>
+      </div>`;
+    }).join('')}</div>
+    <div class="muted small infl-note">Market-implied paths need €STR / SONIA / TONA futures, which have no free feed — the futures-implied path is shown for the Fed only. SONIA and the BoJ call rate track their policy rates within a few bp.</div>`;
 
   if (pol?.path?.length) {
     const c = pol.change12mBp;
@@ -143,20 +216,26 @@ function renderPolicy(p) {
     $('policy-card').innerHTML = '<div class="panel-title">Fed implied policy path</div><div class="muted small">Fed funds futures unavailable.</div>';
   }
 
+  const cpiIds = [['CPIAUCSL', 'US CPI'], ['CP0000EZ19M086NEST', 'Euro Area HICP'], ['GBRCPIALLMINMEI', 'UK CPI']];
+  const inflGauge = ([id, label]) => {
+    const m = p.macro?.[id];
+    if (!m || m.latest == null) return '';
+    const stale = isStale(m);
+    const dev = m.latest - 2;
+    return `<div class="gauge${stale ? ' stale' : ''}">
+      <div class="g-name">${label}${stale ? ' <span class="muted">(stale)</span>' : ''}</div>
+      <div class="g-val">${fmt(m.latest)}%</div>
+      <div class="g-chg ${m.change3m != null ? cls(-m.change3m) : ''}">3m ${m.change3m != null ? (m.change3m >= 0 ? '+' : '') + m.change3m.toFixed(2) + 'pp' : '–'} · ${dev >= 0 ? '+' : ''}${dev.toFixed(2)} vs 2%</div>
+      ${sparkline(m.spark, { height: 26 })}
+    </div>`;
+  };
   $('inflation-card').innerHTML = `
-    <div class="panel-title">Market inflation expectations <span class="muted small">(TIPS breakevens, FRED)</span></div>
-    <div class="infl-grid">${inflIds.map(([id, label]) => {
-      const m = p.macro?.[id];
-      if (!m) return '';
-      const dev = m.latest != null ? m.latest - 2 : null;
-      return `<div class="gauge">
-        <div class="g-name">${label}</div>
-        <div class="g-val">${fmt(m.latest)}%</div>
-        <div class="g-chg ${m.change3m != null ? cls(-m.change3m) : ''}">3m ${m.change3m != null ? (m.change3m >= 0 ? '+' : '') + m.change3m.toFixed(2) + 'pp' : '–'}${dev != null ? ` · ${dev >= 0 ? '+' : ''}${dev.toFixed(2)} vs 2%` : ''}</div>
-        ${sparkline(m.spark, { height: 26 })}
-      </div>`;
-    }).join('') || '<div class="muted small">Breakeven data unavailable.</div>'}</div>
-    <div class="muted small infl-note">The 5y5y forward is the Fed's preferred gauge of whether long-run expectations stay anchored near 2%.</div>`;
+    <div class="panel-title">Inflation — market-implied &amp; realized <span class="muted small">(FRED)</span></div>
+    <div class="infl-sub muted small">US market-implied (TIPS breakevens)</div>
+    <div class="infl-grid">${inflIds.map(inflGauge).join('') || '<div class="muted small">Breakeven data unavailable.</div>'}</div>
+    <div class="infl-sub muted small">Realized CPI, % y/y <span class="muted">(Japan has no live free monthly CPI feed)</span></div>
+    <div class="infl-grid">${cpiIds.map(inflGauge).join('') || '<div class="muted small">CPI data unavailable.</div>'}</div>
+    <div class="muted small infl-note">The 5y5y forward is the Fed's preferred gauge of whether long-run expectations stay anchored near 2%. Inflation swaps for the euro area / UK / Japan have no free feed, so realized CPI stands in for those regions.</div>`;
 }
 
 function renderBacktest(p) {
@@ -337,6 +416,7 @@ async function poll() {
   }
 }
 
+initTabs();
 setInterval(() => { if (lastPayload) renderStatus(lastPayload); }, 1000);
 setInterval(poll, POLL_MS);
 poll();
