@@ -69,7 +69,15 @@ async function testServer() {
       for (const it of items) assert.ok(['OVERWEIGHT', 'NEUTRAL', 'UNDERWEIGHT'].includes(it.tilt), `bad tilt in ${group}`);
     }
     assert.ok(payload.news.length > 0, 'no news items');
-    assert.ok(Object.keys(payload.macro).length >= 8, 'macro series missing');
+    assert.ok(Object.keys(payload.macro).length >= 14, 'macro series missing');
+    assert.ok(payload.macro.T5YIFR && payload.macro.T10YIE, 'inflation expectation series missing');
+    assert.ok(payload.policy && payload.policy.path.length >= 4, 'policy path missing');
+    assert.ok(Number.isFinite(payload.policy.change12mBp), 'policy 12m change missing');
+    assert.ok(payload.backtest && payload.backtest.weeks > 0, 'backtest missing');
+    assert.ok(Array.isArray(payload.backtest.curve) && payload.backtest.curve.length > 5, 'backtest curve missing');
+    assert.ok(payload.recommendations.regime.signals.policy?.length, 'regime policy signal missing');
+    const anyInst = Object.values(payload.instruments)[0];
+    assert.ok(!('closes' in anyInst), 'full closes array leaked into payload');
 
     const html = await (await fetch(`http://localhost:${port}/`)).text();
     assert.ok(html.includes('Global Market'), 'index.html not served');

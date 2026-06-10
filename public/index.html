@@ -35,9 +35,22 @@
       </div>
     </section>
 
+    <section id="policy-section" class="hidden">
+      <h2>Policy Path &amp; Inflation Expectations</h2>
+      <div class="policy-row">
+        <div class="card" id="policy-card"></div>
+        <div class="card" id="inflation-card"></div>
+      </div>
+    </section>
+
     <section id="reco-section" class="hidden">
       <h2>Recommended Tilts <span class="muted small">(vs MSCI ACWI baseline &middot; scores in [-1, +1])</span></h2>
       <div id="reco-groups"></div>
+    </section>
+
+    <section id="backtest-section" class="hidden">
+      <h2>Engine Backtest <span class="muted small">(walk-forward replay of the market signals)</span></h2>
+      <div class="card" id="backtest-card"></div>
     </section>
 
     <section id="markets-section" class="hidden">
@@ -52,6 +65,7 @@
 
     <section id="news-section" class="hidden">
       <h2>Top News <span class="muted small" id="news-sentiment"></span></h2>
+      <div class="news-ai hidden" id="news-ai"></div>
       <ul class="news-list" id="news-list"></ul>
     </section>
 

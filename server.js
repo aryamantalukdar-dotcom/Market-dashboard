@@ -16,6 +16,9 @@ import { fetchAll } from './lib/yahoo.js';
 import { fetchMacroSeries } from './lib/fred.js';
 import { fetchNews, aggregateSentiment } from './lib/news.js';
 import { buildRecommendations } from './lib/engine.js';
+import { buildPolicyPath } from './lib/policy.js';
+import { runBacktest } from './lib/backtest.js';
+import { enrichNews, blendSentiment } from './lib/llm.js';
 import { assemblePayload } from './lib/payload.js';
 import { TiltStore } from './lib/store.js';
 import { mockIndicators, mockMacro, mockNews } from './lib/mock.js';
@@ -32,6 +35,9 @@ const state = {
   macro: new Map(),
   news: [],
   newsAgg: { byTag: {}, overall: 0 },
+  newsLLM: null,
+  policy: null,
+  backtest: null,
   recommendations: null,
   status: {
     quotes: { lastSuccess: null, lastError: null },
@@ -82,6 +88,11 @@ async function refreshMacro() {
   }
 }
 
+// LLM enrichment is throttled independently of the 5-min RSS cycle to keep
+// API spend bounded for long-running local servers.
+const LLM_MIN_INTERVAL_MS = 15 * 60 * 1000;
+let lastLLMAt = 0;
+
 async function refreshNews() {
   if (state.mode === 'mock') {
     state.news = mockNews();
@@ -95,6 +106,14 @@ async function refreshNews() {
     state.newsAgg = aggregateSentiment(items);
     state.status.news.lastSuccess = Date.now();
     state.status.news.lastError = null;
+    if (Date.now() - lastLLMAt > LLM_MIN_INTERVAL_MS) {
+      const llm = await enrichNews(items);
+      if (llm) {
+        state.newsLLM = llm;
+        lastLLMAt = Date.now();
+      }
+    }
+    if (state.newsLLM) state.newsAgg = blendSentiment(state.newsAgg, state.newsLLM);
   }
   if (errors.size) {
     state.status.news.lastError = `${errors.size} feeds failed (e.g. ${[...errors.entries()][0].join(': ')})`;
@@ -103,11 +122,19 @@ async function refreshNews() {
 
 function recompute() {
   if (!state.indicators.size) return;
+  // Policy path and backtest only refresh when the inputs support them
+  // (e.g. a 5d quote refresh has too little history for the backtest).
+  const policy = buildPolicyPath(state.indicators, state.macro);
+  if (policy) state.policy = policy;
+  const backtest = runBacktest(state.indicators);
+  if (backtest) state.backtest = backtest;
+
   const result = buildRecommendations({
     indicators: state.indicators,
     macro: state.macro,
     newsAgg: state.newsAgg,
-    history: store.history
+    history: store.history,
+    policy: state.policy
   });
   store.applyChanges(result.changes);
   state.recommendations = result;
@@ -168,6 +195,9 @@ function dashboardPayload() {
     macro: state.macro,
     news: state.news,
     newsAgg: state.newsAgg,
+    newsLLM: state.newsLLM,
+    policy: state.policy,
+    backtest: state.backtest,
     recommendations: state.recommendations,
     status: state.status,
     tiltLog: store.log.slice(-30).reverse()

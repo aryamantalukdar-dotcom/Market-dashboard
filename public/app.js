@@ -98,7 +98,7 @@ function renderRegime(p) {
       <div class="score-pill">Growth <b class="${cls(r.scores.growth)}">${r.scores.growth}</b></div>
       <div class="score-pill">Inflation pressure <b class="${cls(-r.scores.inflation)}">${r.scores.inflation}</b></div>
     </div>
-    <ul class="regime-signals">${sig(r.signals.risk)}${sig(r.signals.growth)}${sig(r.signals.inflation)}</ul>`;
+    <ul class="regime-signals">${sig(r.signals.risk)}${sig(r.signals.growth)}${sig(r.signals.inflation)}${sig(r.signals.policy || [])}</ul>`;
 
   const gauges = ['ACWI', '^VIX', '^TNX', 'DX-Y.NYB', 'GC=F', 'CL=F', 'BTC-USD', 'EURUSD=X'];
   $('gauges-card').innerHTML = `<div class="gauges">${gauges.map((sym) => {
@@ -110,6 +110,71 @@ function renderRegime(p) {
       <div class="g-chg ${cls(q.dayChangePct)}">${pct(q.dayChangePct)} today &middot; ${pct(q.r3m)} 3m</div>
     </div>`;
   }).join('')}</div>`;
+}
+
+function renderPolicy(p) {
+  const sec = $('policy-section');
+  const pol = p.policy;
+  const inflIds = [['T5YIE', '5y breakeven'], ['T10YIE', '10y breakeven'], ['T5YIFR', '5y5y forward']];
+  const haveInfl = inflIds.some(([id]) => p.macro?.[id]);
+  if (!pol?.path?.length && !haveInfl) { sec.classList.add('hidden'); return; }
+  sec.classList.remove('hidden');
+
+  if (pol?.path?.length) {
+    const c = pol.change12mBp;
+    const dir = c <= -10 ? `${Math.abs(c)} bp of cuts` : c >= 10 ? `${c} bp of hikes` : 'roughly no change';
+    const vals = pol.path.map((x) => x.implied).concat(pol.currentRate);
+    const minR = Math.min(...vals);
+    const span = (Math.max(...vals) - minR) || 1;
+    $('policy-card').innerHTML = `
+      <div class="panel-title">Fed implied policy path <span class="muted small">(${esc(pol.source)})</span></div>
+      <div class="policy-summary">Policy rate ${fmt(pol.currentRate)}% today &middot; futures price
+        <b class="${c <= -10 ? 'pos' : c >= 10 ? 'neg' : ''}">${dir}</b> over the next 12 months
+        <span class="muted">(6m: ${pol.change6mBp >= 0 ? '+' : ''}${pol.change6mBp} bp)</span></div>
+      <div class="policy-bars">${pol.path.map((pt) => {
+        const w = 8 + ((pt.implied - minR) / span) * 90;
+        return `<div class="policy-bar-row">
+          <span class="pb-label">${esc(pt.label)}</span>
+          <div class="pb-track"><div class="pb-fill" style="width:${w.toFixed(1)}%"></div></div>
+          <span class="pb-val">${pt.implied.toFixed(2)}%</span>
+        </div>`;
+      }).join('')}</div>`;
+  } else {
+    $('policy-card').innerHTML = '<div class="panel-title">Fed implied policy path</div><div class="muted small">Fed funds futures unavailable.</div>';
+  }
+
+  $('inflation-card').innerHTML = `
+    <div class="panel-title">Market inflation expectations <span class="muted small">(TIPS breakevens, FRED)</span></div>
+    <div class="infl-grid">${inflIds.map(([id, label]) => {
+      const m = p.macro?.[id];
+      if (!m) return '';
+      const dev = m.latest != null ? m.latest - 2 : null;
+      return `<div class="gauge">
+        <div class="g-name">${label}</div>
+        <div class="g-val">${fmt(m.latest)}%</div>
+        <div class="g-chg ${m.change3m != null ? cls(-m.change3m) : ''}">3m ${m.change3m != null ? (m.change3m >= 0 ? '+' : '') + m.change3m.toFixed(2) + 'pp' : '–'}${dev != null ? ` · ${dev >= 0 ? '+' : ''}${dev.toFixed(2)} vs 2%` : ''}</div>
+        ${sparkline(m.spark, { height: 26 })}
+      </div>`;
+    }).join('') || '<div class="muted small">Breakeven data unavailable.</div>'}</div>
+    <div class="muted small infl-note">The 5y5y forward is the Fed's preferred gauge of whether long-run expectations stay anchored near 2%.</div>`;
+}
+
+function renderBacktest(p) {
+  const sec = $('backtest-section');
+  const bt = p.backtest;
+  if (!bt) { sec.classList.add('hidden'); return; }
+  sec.classList.remove('hidden');
+  $('backtest-card').innerHTML = `
+    <div class="bt-stats">
+      <div class="gauge"><div class="g-name">Active return (window)</div><div class="g-val ${cls(bt.activeReturnPct)}">${pct(bt.activeReturnPct, 2)}</div></div>
+      <div class="gauge"><div class="g-name">Annualized</div><div class="g-val ${cls(bt.annualizedPct)}">${pct(bt.annualizedPct, 2)}</div></div>
+      <div class="gauge"><div class="g-name">Weekly hit rate</div><div class="g-val">${bt.hitRatePct}%</div></div>
+      <div class="gauge"><div class="g-name">Max drawdown</div><div class="g-val neg">-${bt.maxDrawdownPct}%</div></div>
+      <div class="gauge"><div class="g-name">Avg tilts on</div><div class="g-val">${bt.avgPositions} / ${bt.universe}</div></div>
+      <div class="gauge"><div class="g-name">Weeks tested</div><div class="g-val">${bt.weeks}</div></div>
+    </div>
+    <div class="bt-curve">${sparkline(bt.curve, { height: 46 })}</div>
+    <ul class="bt-caveats">${bt.caveats.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>`;
 }
 
 const RECO_GROUPS = [
@@ -192,6 +257,25 @@ function renderMacro(p) {
 function renderNews(p) {
   const overall = p.newsSentiment?.overall ?? 0;
   $('news-sentiment').textContent = `aggregate sentiment: ${overall > 0.05 ? 'positive' : overall < -0.05 ? 'negative' : 'neutral'} (${overall.toFixed(2)})`;
+
+  const ai = $('news-ai');
+  if (p.newsLLM?.summary) {
+    ai.classList.remove('hidden');
+    const impactCls = { risk_on: 'pos', risk_off: 'neg' }[p.newsLLM.marketImpact] || '';
+    const events = (p.newsLLM.events || []).slice(0, 6).map((e) =>
+      `<span class="ai-event ${e.direction > 0 ? 'pos' : 'neg'}" title="${esc((e.buckets || []).join(', '))} · severity ${e.severity}">${esc(String(e.type || '').replace('_', ' '))}: ${esc(String(e.headline || '').slice(0, 90))}</span>`
+    ).join('');
+    ai.innerHTML = `
+      <div class="ai-head">
+        <span class="ai-badge">AI ANALYSIS</span>
+        <span class="ai-impact ${impactCls}">${esc(String(p.newsLLM.marketImpact || '').replace('_', '-'))}</span>
+        <span class="muted small">${esc(p.newsLLM.model || '')}</span>
+      </div>
+      <div class="ai-summary">${esc(p.newsLLM.summary)}</div>
+      ${events ? `<div class="ai-events">${events}</div>` : ''}`;
+  } else {
+    ai.classList.add('hidden');
+  }
   $('news-list').innerHTML = (p.news || []).slice(0, 30).map((n) => {
     const dot = n.sentiment > 0 ? 'sent-pos' : n.sentiment < 0 ? 'sent-neg' : 'sent-neu';
     const when = n.publishedAt ? new Date(n.publishedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
@@ -233,7 +317,9 @@ function render(p) {
   }
   renderStatus(p);
   renderRegime(p);
+  renderPolicy(p);
   renderRecos(p);
+  renderBacktest(p);
   renderMarkets(p);
   renderMacro(p);
   renderNews(p);

@@ -16,6 +16,9 @@ import { fetchAll } from '../lib/yahoo.js';
 import { fetchMacroSeries } from '../lib/fred.js';
 import { fetchNews, aggregateSentiment } from '../lib/news.js';
 import { buildRecommendations } from '../lib/engine.js';
+import { buildPolicyPath } from '../lib/policy.js';
+import { runBacktest } from '../lib/backtest.js';
+import { enrichNews, blendSentiment } from '../lib/llm.js';
 import { assemblePayload } from '../lib/payload.js';
 import { mockIndicators, mockMacro, mockNews } from '../lib/mock.js';
 
@@ -98,8 +101,20 @@ if (indicators.size < 20) {
   process.exit(1);
 }
 
-const newsAgg = aggregateSentiment(newsItems);
-const result = buildRecommendations({ indicators, macro, newsAgg, history, now });
+let newsAgg = aggregateSentiment(newsItems);
+// Optional LLM news layer (requires ANTHROPIC_API_KEY; silently skipped otherwise)
+const newsLLM = MOCK ? null : await enrichNews(newsItems);
+if (newsLLM) {
+  newsAgg = blendSentiment(newsAgg, newsLLM);
+  console.log(`[static] LLM news layer active (${newsLLM.model}): ${newsLLM.marketImpact}, ${newsLLM.events.length} events`);
+}
+
+const policy = buildPolicyPath(indicators, macro);
+const backtest = runBacktest(indicators);
+if (policy) console.log(`[static] policy path: ${policy.path.length} contracts, 12m change ${policy.change12mBp}bp`);
+if (backtest) console.log(`[static] backtest: ${backtest.weeks} weeks, active return ${backtest.activeReturnPct}%`);
+
+const result = buildRecommendations({ indicators, macro, newsAgg, history, policy, now });
 
 for (const c of result.changes) {
   history[c.key] = { tilt: c.tilt, changedAt: c.changedAt, lastTradeDir: c.lastTradeDir };
@@ -114,6 +129,9 @@ const payload = assemblePayload({
   macro,
   news: newsItems,
   newsAgg,
+  newsLLM,
+  policy,
+  backtest,
   recommendations: result,
   status,
   tiltLog: log.slice(-30).reverse()

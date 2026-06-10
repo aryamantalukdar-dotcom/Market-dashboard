@@ -29,8 +29,13 @@ jobs:
 
       # PREVIOUS_DATA_URL (the 30-day compliance lock state) is derived from
       # GITHUB_REPOSITORY inside the script, so scheduled runs work too.
+      # ANTHROPIC_API_KEY (optional repo secret) enables the LLM news layer;
+      # the build silently falls back to wordlist sentiment without it.
       - name: Build static snapshot (live data)
         run: node scripts/build-static.js
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
 
       # Pushing a gh-pages branch auto-enables Pages serving for the repo;
       # the workflow token cannot create a Pages site via the API.

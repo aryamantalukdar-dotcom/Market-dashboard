@@ -53,20 +53,56 @@ Open http://localhost:3000.
 
 | Source | Data | Refresh |
 |---|---|---|
-| Yahoo Finance (free chart API) | ~50 instruments: ACWI benchmark, 10 regions, 11 sectors, 6 styles, 7 bond classes, 5 commodities, 5 FX pairs, VIX/rates/BTC | quotes **60s**, full 1y history 10min |
-| FRED (public CSV, no key) | CPI & core CPI (y/y), unemployment, payrolls, fed funds, 10y–2y curve, HY credit spreads, consumer sentiment | 6h (data is daily/monthly) |
+| Yahoo Finance (free chart API) | ~62 instruments: ACWI benchmark, 10 regions, 11 sectors, 6 styles, 7 bond classes, 5 commodities, 5 FX pairs, VIX/rates/BTC, plus the next 12 monthly **fed funds futures** contracts | quotes **60s**, full 1y history 10min |
+| FRED (public CSV, no key) | CPI & core CPI (y/y), unemployment, payrolls, **jobless claims**, **industrial production**, fed funds, **ECB deposit rate**, 10y–2y curve, HY credit spreads, consumer sentiment, **5y/10y inflation breakevens + 5y5y forward** | 6h (data is daily/weekly/monthly) |
 | RSS (BBC World, CNBC, MarketWatch, Yahoo Finance, Guardian Business) | Top worldwide headlines with keyword sentiment + region/sector tagging | 5min |
+| Claude API (optional, needs `ANTHROPIC_API_KEY`) | LLM news layer: structured event extraction, market-impact call, per-bucket sentiment | with news (throttled to 15min locally) |
 
 The frontend polls the server every 30s with a live countdown. If a source is
 unreachable the dashboard keeps the last good data and surfaces the error in the
 header; if nothing is reachable at boot it falls back to clearly-badged demo data.
 
+### Policy path & inflation expectations monitors
+
+- **Fed implied policy path** — implied rate (100 − price) from the strip of
+  30-day fed funds futures (ZQ, CME) out 12 months, vs the current effective
+  rate. The bp of cuts/hikes priced in shows up as a regime signal and feeds a
+  small duration tilt (deep easing priced → duration tailwind, hikes priced →
+  headwind).
+- **Inflation forwards** — 5y and 10y TIPS breakevens plus the **5y5y forward**
+  (the Fed's preferred gauge of long-run anchoring). Levels vs the 2% target
+  and the 3-month repricing feed the regime's inflation score alongside CPI.
+
+### LLM news layer (optional)
+
+Add an `ANTHROPIC_API_KEY` secret (repo Settings → Secrets and variables →
+Actions) and the hosted build enriches headlines via the Claude API: a 2-3
+sentence synthesis, a risk-on/risk-off call, extracted events with severity
+(central-bank surprises, geopolitical escalation, ...), and per-bucket
+sentiment that is averaged 50/50 with the transparent wordlist scores — still
+capped at the engine's 10% news weight, so it nudges rather than drives.
+Default model is `claude-opus-4-8`; set an `LLM_MODEL` repo variable (e.g.
+`claude-haiku-4-5`) to trade some quality for ~5x lower cost. Without a key
+everything silently falls back to wordlist sentiment.
+
+### Backtest panel
+
+Every snapshot replays the engine's **market signals** (momentum + trend with
+the same weights, thresholds and hysteresis) walk-forward over the fetched
+year of daily history: weekly rebalance, ±2% active weight per tilted bucket
+vs ACWI. The panel shows active return, hit rate, max drawdown and an equity
+curve — with explicit caveats: macro-regime fit and news sentiment cannot be
+replayed point-in-time from free sources, and one year of history is a sanity
+check, not proof of alpha.
+
 ## How recommendations are built
 
 1. **Macro regime classification** — three scores in [-1, 1]:
    - *Risk appetite*: VIX level, ACWI vs 200-day average, HY spread level & 3m change
-   - *Growth*: payrolls, unemployment trend, yield-curve shape
-   - *Inflation pressure*: core CPI level vs target and 6m trend
+   - *Growth*: payrolls, unemployment trend, jobless-claims trend, industrial
+     production, yield-curve shape
+   - *Inflation pressure*: core CPI level vs target and 6m trend, plus
+     market-implied expectations (5y5y forward anchoring, breakeven repricing)
 
    These map to a regime: **Goldilocks**, **Reflation**, **Stagflation Risk**,
    **Slowdown/Disinflation**, or **Risk-Off Stress** (overrides the grid when
@@ -99,8 +135,11 @@ reasons, so you can always see *why* a tilt is what it is.
 server.js            zero-dep Node HTTP server + refresh scheduler
 lib/config.js        instrument universe, feeds, cadences, engine weights
 lib/yahoo.js         Yahoo chart fetcher → indicator pack (returns, MAs, vol, sparklines)
-lib/fred.js          FRED fredgraph.csv fetcher (+ y/y, m/m transforms)
+lib/fred.js          FRED fredgraph.csv fetcher (freq-aware 3m/6m trends, y/y & m/m transforms)
 lib/news.js          RSS parsing, keyword sentiment, bucket tagging
+lib/llm.js           optional Claude API news layer (events, impact, bucket sentiment)
+lib/policy.js        fed funds futures strip → implied policy path
+lib/backtest.js      walk-forward replay of the market signals
 lib/engine.js        regime classification, scoring, tilts, 30-day lock
 lib/store.js         persistent tilt history + audit log
 lib/mock.js          deterministic offline demo data
@@ -110,11 +149,6 @@ scripts/smoke.js     end-to-end smoke test
 
 ## Ideas for future improvement
 
-- **LLM news layer**: replace wordlist sentiment with Claude API summarization +
-  structured event extraction (central-bank surprises, geopolitical escalation).
-- **Richer macro**: global PMIs, ECB/BOJ policy rates, earnings-revision breadth;
-  FRED API key for higher-frequency pulls.
-- **Backtesting**: replay the engine over history to size tilt magnitudes honestly.
 - **Drift/rebalance helper**: enter your actual ACWI-based holdings and get
   tracking-error-aware tilt sizing (e.g. ±2% bands) plus a compliance-friendly
   quarterly rebalance calendar.
@@ -122,3 +156,7 @@ scripts/smoke.js     end-to-end smoke test
   regime *changes* matter more than levels for a monthly rebalancer.
 - **Real benchmark weights**: pull current MSCI ACWI country/sector weights
   instead of static approximations.
+- **ECB/BOJ implied paths**: €STR and TONA futures aren't on Yahoo's free API;
+  a paid or scraped source could extend the policy monitor beyond the Fed.
+- **Longer backtest**: fetch 5-10y of history (slower, heavier) to make the
+  walk-forward replay statistically meaningful and to size tilt magnitudes.
