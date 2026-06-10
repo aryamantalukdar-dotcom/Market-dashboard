@@ -187,3 +187,54 @@ h2 { font-size: 16px; margin-bottom: 12px; }
 .tilt-log li { padding: 5px 0; border-bottom: 1px solid var(--border); color: var(--muted); }
 
 footer { padding: 16px 22px 30px; color: var(--muted); font-size: 11.5px; max-width: 1500px; margin: 0 auto; }
+
+/* ----------------------- Mobile (phones) ----------------------- */
+@media (max-width: 700px) {
+  .topbar { padding: 10px 14px; }
+  .topbar-right { flex-basis: 100%; justify-content: space-between; }
+  .brand h1 { font-size: 16px; }
+  .subtitle { display: block; margin-top: 2px; }
+
+  .compliance-banner { margin: 12px 12px 0; padding: 10px 12px; font-size: 11.5px; }
+
+  main { padding: 14px 12px 32px; }
+  footer { padding: 14px 12px 24px; }
+
+  h2 { font-size: 14.5px; }
+
+  .gauges { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+  .mkt-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .macro-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+
+  /* Recommendation tables become stacked cards: one card per exposure,
+     fields rearranged via CSS grid areas instead of table columns. */
+  .reco-table, .reco-table tbody { display: block; }
+  .reco-table thead { display: none; }
+  .reco-table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "name name"
+      "tilt tilt"
+      "score r3m"
+      "reasons reasons";
+    gap: 6px 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .reco-table tr:last-child { border-bottom: none; }
+  .reco-table td { display: block; padding: 0; border-bottom: none; }
+  .reco-table td.reco-name { grid-area: name; white-space: normal; min-width: 0; overflow-wrap: anywhere; }
+  .reco-table td:nth-child(2) { grid-area: tilt; }
+  .reco-table td:nth-child(3) { grid-area: score; min-width: 0; }
+  .reco-table td:nth-child(4) { grid-area: r3m; justify-self: end; align-self: center; }
+  .reco-table td:nth-child(4)::before { content: "3m "; color: var(--muted); }
+  .reco-table td:nth-child(5) { grid-area: reasons; overflow-wrap: anywhere; }
+  .score-bar-wrap { min-width: 0; }
+
+  /* News rows wrap onto multiple lines on narrow screens */
+  .news-list li { flex-wrap: wrap; position: relative; padding-left: 26px; }
+  .sent-dot { position: absolute; left: 12px; top: 13px; }
+  .news-title, .news-tags, .news-meta { flex-basis: 100%; }
+  .news-meta { white-space: normal; }
+}
