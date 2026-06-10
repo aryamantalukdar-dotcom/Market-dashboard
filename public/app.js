@@ -216,7 +216,7 @@ function renderPolicy(p) {
     $('policy-card').innerHTML = '<div class="panel-title">Fed implied policy path</div><div class="muted small">Fed funds futures unavailable.</div>';
   }
 
-  const cpiIds = [['CPIAUCSL', 'US CPI'], ['CP0000EZ19M086NEST', 'Euro Area HICP'], ['CPALTT01GBQ659N', 'UK CPI (quarterly)']];
+  const cpiIds = [['CPIAUCSL', 'US CPI'], ['CP0000EZ19M086NEST', 'Euro Area HICP'], ['UKCPI_D7G7', 'UK CPI']];
   const inflGauge = ([id, label]) => {
     const m = p.macro?.[id];
     if (!m || m.latest == null) return '';
