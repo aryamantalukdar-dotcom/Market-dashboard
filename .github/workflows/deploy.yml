@@ -4,8 +4,10 @@ on:
   push:
     branches: [main]
   schedule:
-    # Refresh the live snapshot every 10 minutes (GitHub may add delay)
-    - cron: "*/10 * * * *"
+    # Refresh the live snapshot every 10 minutes. Offset minutes (rather than
+    # */10) avoid the top-of-hour congestion that causes GitHub's scheduler
+    # to silently skip ticks for "*/N" cron expressions.
+    - cron: "4,14,24,34,44,54 * * * *"
   workflow_dispatch:
 
 permissions:
