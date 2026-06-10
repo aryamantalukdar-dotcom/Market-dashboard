@@ -1,0 +1,15 @@
+{
+  "name": "market-dashboard",
+  "version": "1.0.0",
+  "description": "Global market & macro dashboard with compliance-aware allocation tilts (region/sector/asset-class, never single stocks)",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "demo": "MOCK=1 node server.js",
+    "smoke": "node scripts/smoke.js"
+  },
+  "license": "MIT"
+}
