@@ -72,7 +72,7 @@ async function testServer() {
     assert.ok(Object.keys(payload.macro).length >= 18, 'macro series missing');
     assert.ok(payload.macro.T5YIFR && payload.macro.T10YIE, 'inflation expectation series missing');
     assert.ok(payload.macro.ECBDFR && payload.macro.IUDSOIA && payload.macro.IRSTCI01JPM156N, 'central bank stance series missing');
-    assert.ok(payload.macro.CP0000EZ19M086NEST && payload.macro.CPALTT01GBQ659N, 'regional CPI series missing');
+    assert.ok(payload.macro.CP0000EZ19M086NEST && payload.macro.UKCPI_D7G7, 'regional CPI series missing');
     assert.ok(payload.policy && payload.policy.path.length >= 4, 'policy path missing');
     assert.ok(Number.isFinite(payload.policy.change12mBp), 'policy 12m change missing');
     assert.ok(payload.backtest && payload.backtest.weeks > 0, 'backtest missing');
