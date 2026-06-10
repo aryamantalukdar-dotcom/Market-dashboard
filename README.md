@@ -20,10 +20,16 @@ It is deliberately built for a **passive, compliance-constrained investor**:
 
 ## Hosted version (always on)
 
-The dashboard is deployed to **GitHub Pages** and rebuilt with fresh live data
-**every 10 minutes** by a scheduled GitHub Actions workflow:
+A scheduled GitHub Actions workflow rebuilds a live snapshot **every 10
+minutes** and force-pushes it to the `gh-pages` branch. Two ways to view it:
 
-> https://aryamantalukdar-dotcom.github.io/Market-dashboard/
+> **Primary:** https://aryamantalukdar-dotcom.github.io/Market-dashboard/
+>
+> **No-setup mirror:** https://raw.githack.com/aryamantalukdar-dotcom/Market-dashboard/gh-pages/index.html
+
+If the primary URL 404s, GitHub Pages needs one one-time switch flipped:
+**Settings → Pages → Source: “Deploy from a branch” → `gh-pages` / root** —
+the Actions workflow token isn't allowed to create the Pages site itself.
 
 The hosted build is a static snapshot: each run fetches all sources, runs the
 engine, and publishes the result (badged `LIVE · 10-MIN SNAPSHOTS`). The 30-day

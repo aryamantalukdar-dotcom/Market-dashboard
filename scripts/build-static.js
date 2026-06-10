@@ -24,25 +24,33 @@ const MOCK = process.env.MOCK === '1';
 
 let history = {};
 let log = [];
-let prevUrl = process.env.PREVIOUS_DATA_URL;
-if (!prevUrl && process.env.GITHUB_REPOSITORY) {
+const prevUrls = [];
+if (process.env.PREVIOUS_DATA_URL) prevUrls.push(process.env.PREVIOUS_DATA_URL);
+if (process.env.GITHUB_REPOSITORY) {
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
-  prevUrl = `https://${owner}.github.io/${repo}/data.json`;
+  // raw.githubusercontent works as soon as the gh-pages branch exists,
+  // even before GitHub Pages serving is enabled in repo settings.
+  prevUrls.push(`https://raw.githubusercontent.com/${owner}/${repo}/gh-pages/data.json`);
+  prevUrls.push(`https://${owner}.github.io/${repo}/data.json`);
 }
-if (prevUrl && !MOCK) {
-  try {
-    const res = await fetch(prevUrl, { headers: { 'Cache-Control': 'no-cache' } });
-    if (res.ok) {
+if (!MOCK) {
+  for (const prevUrl of prevUrls) {
+    try {
+      const res = await fetch(prevUrl, { headers: { 'Cache-Control': 'no-cache' } });
+      if (!res.ok) {
+        console.log(`[static] no previous snapshot at ${prevUrl} (HTTP ${res.status})`);
+        continue;
+      }
       const prev = await res.json();
       history = prev.tiltState?.history || {};
       log = prev.tiltState?.log || [];
       console.log(`[static] loaded previous tilt state (${Object.keys(history).length} keys, ${log.length} log entries)`);
-    } else {
-      console.log(`[static] no previous snapshot yet (HTTP ${res.status}) — starting fresh`);
+      break;
+    } catch (err) {
+      console.log(`[static] previous snapshot unreachable at ${prevUrl} (${err.message})`);
     }
-  } catch (err) {
-    console.log(`[static] no previous snapshot reachable (${err.message}) — starting fresh`);
   }
+  if (!Object.keys(history).length) console.log('[static] starting with fresh tilt state');
 }
 
 const now = Date.now();
