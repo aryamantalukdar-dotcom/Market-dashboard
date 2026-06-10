@@ -4,6 +4,24 @@
 const POLL_MS = 30 * 1000;
 let lastPayload = null;
 let nextPollAt = Date.now();
+let dataSource = null; // '/api/dashboard' (local server) or 'data.json' (static hosting)
+
+async function fetchPayload() {
+  if (dataSource !== 'data.json') {
+    try {
+      const res = await fetch('/api/dashboard');
+      if (res.ok) {
+        dataSource = '/api/dashboard';
+        return res.json();
+      }
+    } catch { /* fall through to static snapshot */ }
+    if (dataSource === '/api/dashboard') throw new Error('API unreachable');
+  }
+  const res = await fetch(`data.json?t=${Date.now()}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  dataSource = 'data.json';
+  return res.json();
+}
 
 const $ = (id) => document.getElementById(id);
 
@@ -196,14 +214,14 @@ function renderLog(p) {
 
 function renderStatus(p) {
   const badge = $('mode-badge');
-  badge.textContent = p.mode === 'live' ? 'LIVE DATA' : 'DEMO DATA';
+  badge.textContent = p.mode !== 'live' ? 'DEMO DATA' : p.hosted ? 'LIVE · 10-MIN SNAPSHOTS' : 'LIVE DATA';
   badge.className = `badge ${p.mode === 'live' ? 'live' : 'mock'}`;
   const errs = Object.entries(p.status || {})
     .filter(([, s]) => s.lastError)
     .map(([k, s]) => `${k}: ${s.lastError}`);
   const secs = Math.max(0, Math.round((nextPollAt - Date.now()) / 1000));
   $('refresh-info').textContent =
-    `updated ${new Date(p.generatedAt).toLocaleTimeString()} · next refresh in ${secs}s` +
+    `data as of ${new Date(p.generatedAt).toLocaleTimeString()} · next check in ${secs}s` +
     (errs.length ? ` · ⚠ ${errs.join(' | ')}` : '');
 }
 
@@ -224,9 +242,7 @@ function render(p) {
 
 async function poll() {
   try {
-    const res = await fetch('/api/dashboard');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const payload = await res.json();
+    const payload = await fetchPayload();
     nextPollAt = Date.now() + POLL_MS;
     render(payload);
   } catch (err) {

@@ -16,6 +16,7 @@ import { fetchAll } from './lib/yahoo.js';
 import { fetchMacroSeries } from './lib/fred.js';
 import { fetchNews, aggregateSentiment } from './lib/news.js';
 import { buildRecommendations } from './lib/engine.js';
+import { assemblePayload } from './lib/payload.js';
 import { TiltStore } from './lib/store.js';
 import { mockIndicators, mockMacro, mockNews } from './lib/mock.js';
 
@@ -161,23 +162,16 @@ const MIME = {
 };
 
 function dashboardPayload() {
-  const instruments = {};
-  for (const inst of allInstruments()) {
-    const ind = state.indicators.get(inst.symbol);
-    if (ind) instruments[inst.symbol] = { ...inst, ...ind };
-  }
-  return {
+  return assemblePayload({
     mode: state.mode,
-    generatedAt: Date.now(),
-    refreshMs: { quotes: REFRESH.quotesMs, news: REFRESH.newsMs, macro: REFRESH.macroMs },
-    status: state.status,
-    instruments,
-    macro: Object.fromEntries(state.macro),
+    indicators: state.indicators,
+    macro: state.macro,
     news: state.news,
-    newsSentiment: state.newsAgg,
+    newsAgg: state.newsAgg,
     recommendations: state.recommendations,
+    status: state.status,
     tiltLog: store.log.slice(-30).reverse()
-  };
+  });
 }
 
 function sendJson(res, code, obj) {

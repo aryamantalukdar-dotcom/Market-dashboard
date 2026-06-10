@@ -18,12 +18,25 @@ It is deliberately built for a **passive, compliance-constrained investor**:
 > ⚠️ Educational tool, not investment advice. Always preclear personal trades
 > with your compliance team.
 
-## Quick start
+## Hosted version (always on)
+
+The dashboard is deployed to **GitHub Pages** and rebuilt with fresh live data
+**every 10 minutes** by a scheduled GitHub Actions workflow:
+
+> https://aryamantalukdar-dotcom.github.io/Market-dashboard/
+
+The hosted build is a static snapshot: each run fetches all sources, runs the
+engine, and publishes the result (badged `LIVE · 10-MIN SNAPSHOTS`). The 30-day
+compliance lock state is carried forward from the previous snapshot, so it
+persists across rebuilds. For second-by-second countdowns and 60-second quote
+refresh, run it locally instead.
+
+## Quick start (local — fastest refresh)
 
 Requires Node ≥ 18. **Zero npm dependencies, zero API keys.**
 
 ```bash
-npm start        # live data
+npm start        # live data, quotes refresh every 60s
 npm run demo     # offline demo with deterministic mock data
 npm run smoke    # end-to-end smoke test (mock mode)
 ```
