@@ -67,6 +67,28 @@ function initTabs() {
   applyTab();
 }
 
+// The /public/ deployment ships a payload with variant: 'public' and no
+// tilt data; adapt the chrome once on first render.
+let variantApplied = false;
+function applyVariant(p) {
+  if (variantApplied) return;
+  variantApplied = true;
+  if (p.variant !== 'public') return;
+  const idx = TABS.findIndex(([k]) => k === 'tilts');
+  if (idx >= 0) TABS.splice(idx, 1);
+  if (activeTab === 'tilts') {
+    activeTab = 'overview';
+    history.replaceState(null, '', '#overview');
+  }
+  initTabs();
+  const banner = document.querySelector('.compliance-banner');
+  if (banner) {
+    banner.innerHTML = '<strong>Disclaimer:</strong> Informational/educational only — not investment advice. '
+      + 'This view shows market, macro and news monitors with a rules-based regime read; '
+      + 'no allocation recommendations are published here.';
+  }
+}
+
 function fmt(n, digits = 2) {
   if (n == null || !Number.isFinite(n)) return '–';
   return n.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -414,6 +436,7 @@ function renderStatus(p) {
 
 function render(p) {
   lastPayload = p;
+  applyVariant(p);
   $('loading').classList.add('hidden');
   for (const id of ['regime-section', 'reco-section', 'markets-section', 'macro-section', 'news-section', 'log-section']) {
     $(id).classList.remove('hidden');

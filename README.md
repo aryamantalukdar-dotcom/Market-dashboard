@@ -25,6 +25,11 @@ minutes** and force-pushes it to the `gh-pages` branch. Two ways to view it:
 
 > **Primary:** https://aryamantalukdar-dotcom.github.io/Market-dashboard/
 >
+> **External-facing (no tilts):** https://aryamantalukdar-dotcom.github.io/Market-dashboard/public/ —
+> same markets/macro/policy/news monitors, but the allocation tilts, backtest,
+> tilt log and compliance-lock state are stripped from the published payload
+> itself, so the shareable link exposes no recommendations.
+>
 > **No-setup mirror:** https://raw.githack.com/aryamantalukdar-dotcom/Market-dashboard/gh-pages/index.html
 
 If the primary URL 404s, GitHub Pages needs one one-time switch flipped:

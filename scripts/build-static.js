@@ -142,4 +142,22 @@ const dist = join(ROOT, 'dist');
 mkdirSync(dist, { recursive: true });
 cpSync(join(ROOT, 'public'), dist, { recursive: true });
 writeFileSync(join(dist, 'data.json'), JSON.stringify(payload));
+
+// External-facing variant at /public/: same dashboard, but allocation tilts,
+// backtest, tilt log and lock state are stripped from the payload itself (not
+// merely hidden), so the shareable URL exposes no recommendations.
+const publicPayload = {
+  ...payload,
+  variant: 'public',
+  recommendations: { regime: result.regime },
+  backtest: null,
+  tiltLog: []
+};
+delete publicPayload.tiltState;
+const pubDir = join(dist, 'public');
+mkdirSync(pubDir, { recursive: true });
+cpSync(join(ROOT, 'public'), pubDir, { recursive: true });
+writeFileSync(join(pubDir, 'data.json'), JSON.stringify(publicPayload));
+
 console.log(`[static] wrote dist/ — ${indicators.size} instruments, ${macro.size} macro series, ${newsItems.length} headlines, regime: ${result.regime.label}`);
+console.log('[static] wrote dist/public/ — external variant without tilts');
