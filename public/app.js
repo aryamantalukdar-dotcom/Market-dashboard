@@ -195,6 +195,9 @@ function renderPolicy(p) {
   if (!pol?.path?.length && !haveInfl && !haveStance) { sec.classList.add('hidden'); return; }
   sec.classList.remove('hidden');
 
+  const outlookByBank = {};
+  for (const o of pol?.outlook || []) outlookByBank[o.bank] = o;
+
   $('stance-card').innerHTML = `
     <div class="panel-title">Policy stance — major central banks</div>
     <div class="stance-rows">${CENTRAL_BANKS.map((b) => {
@@ -203,17 +206,35 @@ function renderPolicy(p) {
         return `<div class="stance-row muted"><span class="st-bank">${b.bank}</span><span class="st-note">${b.note} — unavailable</span></div>`;
       }
       const stale = isStale(m);
-      const chg = m.change6m != null ? Math.round(m.change6m * 100) : null;
-      const dir = chg == null ? '' : chg <= -10 ? `cut ${Math.abs(chg)}bp / 6m` : chg >= 10 ? `hiked ${chg}bp / 6m` : 'on hold';
-      const dirCls = chg == null ? '' : chg <= -10 ? 'pos' : chg >= 10 ? 'neg' : 'muted';
+      // Most recent discrete move >= 10bp beats a 6m average for visibility
+      // of fresh hikes/cuts; fall back to the 6m change.
+      const mv = m.lastMove && Math.abs(m.lastMove.delta) >= 0.1 ? m.lastMove : null;
+      const mvRecent = mv && Date.now() - Date.parse(mv.date) <= 200 * 86400 * 1000 ? mv : null;
+      let dir = 'on hold';
+      let dirCls = 'muted';
+      if (mvRecent) {
+        const bp = Math.round(mvRecent.delta * 100);
+        const when = new Date(mvRecent.date).toLocaleDateString([], { day: 'numeric', month: 'short' });
+        dir = `${bp > 0 ? 'hiked' : 'cut'} ${Math.abs(bp)}bp on ${when}`;
+        dirCls = bp > 0 ? 'neg' : 'pos';
+      } else if (m.change6m != null && Math.abs(Math.round(m.change6m * 100)) >= 10) {
+        const chg = Math.round(m.change6m * 100);
+        dir = chg < 0 ? `cut ${Math.abs(chg)}bp / 6m` : `hiked ${chg}bp / 6m`;
+        dirCls = chg < 0 ? 'pos' : 'neg';
+      }
+      const o = outlookByBank[b.bank];
+      const impl = o?.impliedBp != null
+        ? `<span class="${o.impliedBp <= -10 ? 'pos' : o.impliedBp >= 10 ? 'neg' : 'muted'}" title="${esc(o.basis)}">12m: ${o.impliedBp >= 0 ? '+' : ''}${o.impliedBp}bp</span>`
+        : `<span class="muted" title="${esc(o?.basis || '')}">12m: n/a</span>`;
       return `<div class="stance-row${stale ? ' stale' : ''}">
         <span class="st-bank">${b.bank}<span class="st-region">${esc(b.region)}</span></span>
         <span class="st-rate">${fmt(m.latest)}%</span>
         <span class="st-dir ${dirCls}">${dir}${stale ? ' · stale data' : ''}</span>
+        <span class="st-impl">${impl}</span>
         <span class="st-spark">${sparkline(m.spark, { height: 22 })}</span>
       </div>`;
     }).join('')}</div>
-    <div class="muted small infl-note">Market-implied paths need €STR / SONIA / TONA futures, which have no free feed — the futures-implied path is shown for the Fed only. SONIA and the BoJ call rate track their policy rates within a few bp.</div>`;
+    <div class="muted small infl-note">"12m" is each market's implied policy direction over the next year — hover for the instrument behind it.</div>`;
 
   if (pol?.path?.length) {
     const c = pol.change12mBp;
@@ -238,16 +259,16 @@ function renderPolicy(p) {
     $('policy-card').innerHTML = '<div class="panel-title">Fed implied policy path</div><div class="muted small">Fed funds futures unavailable.</div>';
   }
 
-  // Euro 5y5y forward derived from spot inflation swaps: f ≈ 2×10y − 5y
-  const ez5 = p.macro?.EZBE5;
-  const ez10 = p.macro?.EZBE10;
-  const ez5y5y = ez5?.latest != null && ez10?.latest != null ? {
-    name: 'Euro 5y5y forward',
-    latest: 2 * ez10.latest - ez5.latest,
-    latestDate: ez10.latestDate,
-    change3m: ez5.change3m != null && ez10.change3m != null ? 2 * ez10.change3m - ez5.change3m : null,
-    spark: ez5.spark?.length === ez10.spark?.length ? ez10.spark.map((v, i) => 2 * v - ez5.spark[i]) : null
-  } : null;
+  // 5y5y forwards derived from spot rates: f ≈ 2×10y − 5y
+  const derive5y5y = (b5, b10, name) => (b5?.latest != null && b10?.latest != null ? {
+    name,
+    latest: 2 * b10.latest - b5.latest,
+    latestDate: b10.latestDate,
+    change3m: b5.change3m != null && b10.change3m != null ? 2 * b10.change3m - b5.change3m : null,
+    spark: b5.spark?.length === b10.spark?.length ? b10.spark.map((v, i) => 2 * v - b5.spark[i]) : null
+  } : null);
+  const ez5y5y = derive5y5y(p.macro?.EZBE5, p.macro?.EZBE10, 'Euro 5y5y forward');
+  const uk5y5y = derive5y5y(p.macro?.UKBE5, p.macro?.UKBE10, 'UK 5y5y forward');
 
   const inflGauge = (m, label, target2 = true) => {
     if (!m || m.latest == null) return '';
@@ -271,7 +292,7 @@ function renderPolicy(p) {
     ${region('Euro area — inflation-linked swaps (ECB)',
       [inflGauge(ez5, '5y swap'), inflGauge(ez10, '10y swap'), inflGauge(ez5y5y, '5y5y forward (derived)')].join(''))}
     ${region('United Kingdom — gilt-implied, RPI basis (BoE)',
-      [inflGauge(p.macro?.UKBE5, '5y implied', false), inflGauge(p.macro?.UKBE10, '10y implied', false)].join(''),
+      [inflGauge(p.macro?.UKBE5, '5y implied', false), inflGauge(p.macro?.UKBE10, '10y implied', false), inflGauge(uk5y5y, '5y5y forward (derived)', false)].join(''),
       '(RPI runs ~1pp above CPI)')}
     <div class="muted small infl-note">5y5y forwards are the gauge of whether long-run expectations stay anchored near target. Japan is omitted: JGBi breakevens have no free data feed, and the market is thin enough that the BoJ itself treats them as unreliable. Realized CPI by region lives in the Macro tab.</div>`;
 }

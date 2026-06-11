@@ -134,7 +134,7 @@ h2 { font-size: 16px; margin-bottom: 12px; }
 .stance-rows { display: flex; flex-direction: column; gap: 6px; }
 .stance-row {
   display: grid;
-  grid-template-columns: 110px 64px 1fr 90px;
+  grid-template-columns: 100px 58px 1.4fr 1fr 80px;
   align-items: center;
   gap: 10px;
   background: var(--panel2);
@@ -142,6 +142,7 @@ h2 { font-size: 16px; margin-bottom: 12px; }
   padding: 6px 10px;
   font-size: 12.5px;
 }
+.st-impl { font-size: 11.5px; font-variant-numeric: tabular-nums; cursor: help; }
 .stance-row.stale { opacity: .55; }
 .st-bank { font-weight: 700; }
 .st-region { display: block; font-weight: 400; font-size: 10.5px; color: var(--muted); }
@@ -292,7 +293,7 @@ footer { padding: 16px 22px 30px; color: var(--muted); font-size: 11.5px; max-wi
   .topbar { padding: 10px 14px; }
   .tabs { padding: 6px 10px; }
   .tab-btn { padding: 6px 12px; font-size: 12.5px; }
-  .stance-row { grid-template-columns: 90px 56px 1fr; }
+  .stance-row { grid-template-columns: 84px 52px 1fr 70px; }
   .st-spark { display: none; }
   .topbar-right { flex-basis: 100%; justify-content: space-between; }
   .brand h1 { font-size: 16px; }

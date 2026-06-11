@@ -69,7 +69,9 @@ async function testServer() {
       for (const it of items) assert.ok(['OVERWEIGHT', 'NEUTRAL', 'UNDERWEIGHT'].includes(it.tilt), `bad tilt in ${group}`);
     }
     assert.ok(payload.news.length > 0, 'no news items');
-    assert.ok(Object.keys(payload.macro).length >= 22, 'macro series missing');
+    assert.ok(Object.keys(payload.macro).length >= 24, 'macro series missing');
+    assert.ok(payload.macro.EZIF1Y && payload.macro.JGB1Y, 'policy outlook input series missing');
+    assert.ok(Array.isArray(payload.policy.outlook) && payload.policy.outlook.filter((o) => o.impliedBp != null).length >= 3, 'policy outlook missing');
     assert.ok(payload.macro.T5YIFR && payload.macro.T10YIE, 'inflation expectation series missing');
     assert.ok(payload.macro.ECBDFR && payload.macro.IUDSOIA && payload.macro.IRSTCI01JPM156N, 'central bank stance series missing');
     assert.ok(payload.macro.CP0000EZ19M086NEST && payload.macro.UKCPI_D7G7, "regional CPI series missing");
