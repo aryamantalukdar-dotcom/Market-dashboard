@@ -69,10 +69,11 @@ async function testServer() {
       for (const it of items) assert.ok(['OVERWEIGHT', 'NEUTRAL', 'UNDERWEIGHT'].includes(it.tilt), `bad tilt in ${group}`);
     }
     assert.ok(payload.news.length > 0, 'no news items');
-    assert.ok(Object.keys(payload.macro).length >= 18, 'macro series missing');
+    assert.ok(Object.keys(payload.macro).length >= 22, 'macro series missing');
     assert.ok(payload.macro.T5YIFR && payload.macro.T10YIE, 'inflation expectation series missing');
     assert.ok(payload.macro.ECBDFR && payload.macro.IUDSOIA && payload.macro.IRSTCI01JPM156N, 'central bank stance series missing');
-    assert.ok(payload.macro.CP0000EZ19M086NEST && payload.macro.UKCPI_D7G7, 'regional CPI series missing');
+    assert.ok(payload.macro.CP0000EZ19M086NEST && payload.macro.UKCPI_D7G7, "regional CPI series missing");
+    assert.ok(payload.macro.EZBE5 && payload.macro.EZBE10 && payload.macro.UKBE5 && payload.macro.UKBE10, "foreign breakeven series missing");
     assert.ok(payload.policy && payload.policy.path.length >= 4, 'policy path missing');
     assert.ok(Number.isFinite(payload.policy.change12mBp), 'policy 12m change missing');
     assert.ok(payload.backtest && payload.backtest.weeks > 0, 'backtest missing');

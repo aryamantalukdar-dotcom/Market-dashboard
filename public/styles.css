@@ -250,7 +250,9 @@ h2 { font-size: 16px; margin-bottom: 12px; }
 .sparkline { margin-top: 6px; width: 100%; height: 34px; }
 
 /* Macro */
-.macro-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.macro-group { margin-bottom: 16px; }
+.macro-group h3 { font-size: 13.5px; color: var(--amber); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .6px; }
+.macro-grid-inner { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
 .macro-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
 .macro-name { font-size: 12px; color: var(--muted); }
 .macro-val { font-size: 18px; font-weight: 700; }
@@ -305,7 +307,7 @@ footer { padding: 16px 22px 30px; color: var(--muted); font-size: 11.5px; max-wi
 
   .gauges { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
   .mkt-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-  .macro-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .macro-grid-inner { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   .infl-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
   .bt-stats { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
 

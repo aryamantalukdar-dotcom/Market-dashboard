@@ -216,26 +216,42 @@ function renderPolicy(p) {
     $('policy-card').innerHTML = '<div class="panel-title">Fed implied policy path</div><div class="muted small">Fed funds futures unavailable.</div>';
   }
 
-  const cpiIds = [['CPIAUCSL', 'US CPI'], ['CP0000EZ19M086NEST', 'Euro Area HICP'], ['UKCPI_D7G7', 'UK CPI']];
-  const inflGauge = ([id, label]) => {
-    const m = p.macro?.[id];
+  // Euro 5y5y forward derived from spot inflation swaps: f ≈ 2×10y − 5y
+  const ez5 = p.macro?.EZBE5;
+  const ez10 = p.macro?.EZBE10;
+  const ez5y5y = ez5?.latest != null && ez10?.latest != null ? {
+    name: 'Euro 5y5y forward',
+    latest: 2 * ez10.latest - ez5.latest,
+    latestDate: ez10.latestDate,
+    change3m: ez5.change3m != null && ez10.change3m != null ? 2 * ez10.change3m - ez5.change3m : null,
+    spark: ez5.spark?.length === ez10.spark?.length ? ez10.spark.map((v, i) => 2 * v - ez5.spark[i]) : null
+  } : null;
+
+  const inflGauge = (m, label, target2 = true) => {
     if (!m || m.latest == null) return '';
     const stale = isStale(m);
     const dev = m.latest - 2;
     return `<div class="gauge${stale ? ' stale' : ''}">
       <div class="g-name">${label}${stale ? ' <span class="muted">(stale)</span>' : ''}</div>
       <div class="g-val">${fmt(m.latest)}%</div>
-      <div class="g-chg ${m.change3m != null ? cls(-m.change3m) : ''}">3m ${m.change3m != null ? (m.change3m >= 0 ? '+' : '') + m.change3m.toFixed(2) + 'pp' : '–'} · ${dev >= 0 ? '+' : ''}${dev.toFixed(2)} vs 2%</div>
-      ${sparkline(m.spark, { height: 26 })}
+      <div class="g-chg ${m.change3m != null ? cls(-m.change3m) : ''}">3m ${m.change3m != null ? (m.change3m >= 0 ? '+' : '') + m.change3m.toFixed(2) + 'pp' : '–'}${target2 ? ` · ${dev >= 0 ? '+' : ''}${dev.toFixed(2)} vs 2%` : ''}</div>
+      ${m.spark ? sparkline(m.spark, { height: 26 }) : ''}
     </div>`;
   };
+  const region = (label, html, note = '') => html
+    ? `<div class="infl-sub muted small">${label}${note ? ` <span class="muted">${note}</span>` : ''}</div><div class="infl-grid">${html}</div>`
+    : '';
+
   $('inflation-card').innerHTML = `
-    <div class="panel-title">Inflation — market-implied &amp; realized <span class="muted small">(FRED)</span></div>
-    <div class="infl-sub muted small">US market-implied (TIPS breakevens)</div>
-    <div class="infl-grid">${inflIds.map(inflGauge).join('') || '<div class="muted small">Breakeven data unavailable.</div>'}</div>
-    <div class="infl-sub muted small">Realized CPI, % y/y <span class="muted">(Japan has no live free monthly CPI feed)</span></div>
-    <div class="infl-grid">${cpiIds.map(inflGauge).join('') || '<div class="muted small">CPI data unavailable.</div>'}</div>
-    <div class="muted small infl-note">The 5y5y forward is the Fed's preferred gauge of whether long-run expectations stay anchored near 2%. Inflation swaps for the euro area / UK / Japan have no free feed, so realized CPI stands in for those regions.</div>`;
+    <div class="panel-title">Market-implied inflation expectations</div>
+    ${region('United States — TIPS breakevens (FRED)',
+      inflIds.map(([id, label]) => inflGauge(p.macro?.[id], label)).join(''))}
+    ${region('Euro area — inflation-linked swaps (ECB)',
+      [inflGauge(ez5, '5y swap'), inflGauge(ez10, '10y swap'), inflGauge(ez5y5y, '5y5y forward (derived)')].join(''))}
+    ${region('United Kingdom — gilt-implied, RPI basis (BoE)',
+      [inflGauge(p.macro?.UKBE5, '5y implied', false), inflGauge(p.macro?.UKBE10, '10y implied', false)].join(''),
+      '(RPI runs ~1pp above CPI)')}
+    <div class="muted small infl-note">5y5y forwards are the gauge of whether long-run expectations stay anchored near target. Japan is omitted: JGBi breakevens have no free data feed, and the market is thin enough that the BoJ itself treats them as unreliable. Realized CPI by region lives in the Macro tab.</div>`;
 }
 
 function renderBacktest(p) {
@@ -318,19 +334,27 @@ function renderMarkets(p) {
   }).join('');
 }
 
+const MACRO_TOPICS = ['Inflation', 'Inflation expectations', 'Growth & labor', 'Policy rates', 'Rates & credit', 'Other'];
+
 function renderMacro(p) {
   const entries = Object.values(p.macro || {});
   if (!entries.length) {
     $('macro-grid').innerHTML = '<div class="muted">Macro data unavailable.</div>';
     return;
   }
-  $('macro-grid').innerHTML = entries.map((m) => `
+  const byTopic = {};
+  for (const m of entries) (byTopic[m.topic || 'Other'] = byTopic[m.topic || 'Other'] || []).push(m);
+  const card = (m) => `
     <div class="macro-card">
       <div class="macro-name">${esc(m.name)}</div>
       <div class="macro-val">${fmt(m.latest)} <span class="muted small">${esc(m.unit)}</span></div>
       <div class="macro-meta">3m &Delta; <span class="${cls(m.change3m)}">${m.change3m != null ? (m.change3m >= 0 ? '+' : '') + m.change3m.toFixed(2) : '–'}</span> &middot; as of ${esc(m.latestDate || '–')}</div>
       ${sparkline(m.spark, { height: 28 })}
-    </div>`).join('');
+    </div>`;
+  $('macro-grid').innerHTML = MACRO_TOPICS
+    .filter((t) => byTopic[t]?.length)
+    .map((t) => `<div class="macro-group"><h3>${t}</h3><div class="macro-grid-inner">${byTopic[t].map(card).join('')}</div></div>`)
+    .join('');
 }
 
 function renderNews(p) {
