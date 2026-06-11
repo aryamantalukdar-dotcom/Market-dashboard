@@ -16,7 +16,7 @@ import { fetchAll } from './lib/yahoo.js';
 import { fetchMacroSeries } from './lib/fred.js';
 import { fetchNews, aggregateSentiment } from './lib/news.js';
 import { buildRecommendations } from './lib/engine.js';
-import { buildPolicyPath } from './lib/policy.js';
+import { buildPolicyPath, buildPolicyOutlook } from './lib/policy.js';
 import { runBacktest } from './lib/backtest.js';
 import { enrichNews, blendSentiment } from './lib/llm.js';
 import { assemblePayload } from './lib/payload.js';
@@ -124,8 +124,11 @@ function recompute() {
   if (!state.indicators.size) return;
   // Policy path and backtest only refresh when the inputs support them
   // (e.g. a 5d quote refresh has too little history for the backtest).
-  const policy = buildPolicyPath(state.indicators, state.macro);
-  if (policy) state.policy = policy;
+  const policy = buildPolicyPath(state.indicators, state.macro) || state.policy;
+  if (policy) {
+    policy.outlook = buildPolicyOutlook(policy, state.macro);
+    state.policy = policy;
+  }
   const backtest = runBacktest(state.indicators);
   if (backtest) state.backtest = backtest;
 
