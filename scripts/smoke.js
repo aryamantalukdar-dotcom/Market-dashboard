@@ -6,6 +6,7 @@ import { spawn } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import assert from 'node:assert';
 import { applyCompliance } from '../lib/engine.js';
+import { renderCheck } from './render-check.js';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -83,6 +84,18 @@ async function testServer() {
     assert.ok(payload.recommendations.regime.signals.policy?.length, 'regime policy signal missing');
     const anyInst = Object.values(payload.instruments)[0];
     assert.ok(!('closes' in anyInst), 'full closes array leaked into payload');
+
+    // Frontend render replay: a runtime error in any render function would
+    // leave the real page stuck on "Loading…".
+    renderCheck(payload);
+    renderCheck({
+      ...payload,
+      variant: 'public',
+      recommendations: { regime: payload.recommendations.regime },
+      backtest: null,
+      tiltLog: []
+    });
+    console.log('✓ frontend render replay passed (full + public variants)');
 
     const html = await (await fetch(`http://localhost:${port}/`)).text();
     assert.ok(html.includes('Global Market'), 'index.html not served');

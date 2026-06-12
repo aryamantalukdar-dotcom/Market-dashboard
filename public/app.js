@@ -290,7 +290,7 @@ function renderPolicy(p) {
     ${region('United States — TIPS breakevens (FRED)',
       inflIds.map(([id, label]) => inflGauge(p.macro?.[id], label)).join(''))}
     ${region('Euro area — inflation-linked swaps (ECB)',
-      [inflGauge(ez5, '5y swap'), inflGauge(ez10, '10y swap'), inflGauge(ez5y5y, '5y5y forward (derived)')].join(''))}
+      [inflGauge(p.macro?.EZBE5, '5y swap'), inflGauge(p.macro?.EZBE10, '10y swap'), inflGauge(ez5y5y, '5y5y forward (derived)')].join(''))}
     ${region('United Kingdom — gilt-implied, RPI basis (BoE)',
       [inflGauge(p.macro?.UKBE5, '5y implied', false), inflGauge(p.macro?.UKBE10, '10y implied', false), inflGauge(uk5y5y, '5y5y forward (derived)', false)].join(''),
       '(RPI runs ~1pp above CPI)')}
