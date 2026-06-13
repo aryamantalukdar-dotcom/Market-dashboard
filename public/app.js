@@ -198,12 +198,21 @@ function renderPolicy(p) {
   const outlookByBank = {};
   for (const o of pol?.outlook || []) outlookByBank[o.bank] = o;
 
+  const announcedByBank = {};
+  for (const a of p.policyAnnouncements || []) announcedByBank[a.bank] = a;
+  const announceChip = (bank) => {
+    const a = announcedByBank[bank];
+    if (!a) return '';
+    const when = new Date(a.decidedDate).toLocaleDateString([], { day: 'numeric', month: 'short' });
+    return `<span class="announce-chip" title="${esc(bank)} announced a ${a.deltaBp >= 0 ? '+' : ''}${a.deltaBp}bp move on ${when} — new rate ${a.newRate}% not yet reflected in the official series">&#128226; ${a.deltaBp >= 0 ? '+' : ''}${a.deltaBp}bp announced ${when}</span>`;
+  };
+
   $('stance-card').innerHTML = `
     <div class="panel-title">Policy stance — major central banks</div>
     <div class="stance-rows">${CENTRAL_BANKS.map((b) => {
       const m = p.macro?.[b.id];
       if (!m || m.latest == null) {
-        return `<div class="stance-row muted"><span class="st-bank">${b.bank}</span><span class="st-note">${b.note} — unavailable</span></div>`;
+        return `<div class="stance-row muted"><span class="st-bank">${b.bank}</span><span class="st-note">${b.note} — unavailable</span>${announceChip(b.bank)}</div>`;
       }
       const stale = isStale(m);
       // Most recent discrete move >= 10bp beats a 6m average for visibility
@@ -229,7 +238,7 @@ function renderPolicy(p) {
       return `<div class="stance-row${stale ? ' stale' : ''}">
         <span class="st-bank">${b.bank}<span class="st-region">${esc(b.region)}</span></span>
         <span class="st-rate">${fmt(m.latest)}%</span>
-        <span class="st-dir ${dirCls}">${dir}${stale ? ' · stale data' : ''}</span>
+        <span class="st-dir ${dirCls}">${dir}${stale ? ' · stale data' : ''}${announceChip(b.bank)}</span>
         <span class="st-impl">${impl}</span>
         <span class="st-spark">${sparkline(m.spark, { height: 22 })}</span>
       </div>`;

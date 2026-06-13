@@ -16,7 +16,7 @@ import { fetchAll } from './lib/yahoo.js';
 import { fetchMacroSeries } from './lib/fred.js';
 import { fetchNews, aggregateSentiment } from './lib/news.js';
 import { buildRecommendations } from './lib/engine.js';
-import { buildPolicyPath, buildPolicyOutlook } from './lib/policy.js';
+import { buildPolicyPath, buildPolicyOutlook, pendingPolicyMoves } from './lib/policy.js';
 import { runBacktest } from './lib/backtest.js';
 import { enrichNews, blendSentiment } from './lib/llm.js';
 import { assemblePayload } from './lib/payload.js';
@@ -37,6 +37,7 @@ const state = {
   newsAgg: { byTag: {}, overall: 0 },
   newsLLM: null,
   policy: null,
+  policyAnnouncements: [],
   backtest: null,
   recommendations: null,
   status: {
@@ -132,6 +133,8 @@ function recompute() {
   const backtest = runBacktest(state.indicators);
   if (backtest) state.backtest = backtest;
 
+  state.policyAnnouncements = pendingPolicyMoves(state.macro);
+
   const result = buildRecommendations({
     indicators: state.indicators,
     macro: state.macro,
@@ -200,6 +203,7 @@ function dashboardPayload() {
     newsAgg: state.newsAgg,
     newsLLM: state.newsLLM,
     policy: state.policy,
+    policyAnnouncements: state.policyAnnouncements,
     backtest: state.backtest,
     recommendations: state.recommendations,
     status: state.status,

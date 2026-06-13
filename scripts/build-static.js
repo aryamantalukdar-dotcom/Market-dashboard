@@ -16,7 +16,7 @@ import { fetchAll } from '../lib/yahoo.js';
 import { fetchMacroSeries } from '../lib/fred.js';
 import { fetchNews, aggregateSentiment } from '../lib/news.js';
 import { buildRecommendations } from '../lib/engine.js';
-import { buildPolicyPath, buildPolicyOutlook } from '../lib/policy.js';
+import { buildPolicyPath, buildPolicyOutlook, pendingPolicyMoves } from '../lib/policy.js';
 import { runBacktest } from '../lib/backtest.js';
 import { enrichNews, blendSentiment } from '../lib/llm.js';
 import { assemblePayload } from '../lib/payload.js';
@@ -111,6 +111,7 @@ if (newsLLM) {
 
 const policy = buildPolicyPath(indicators, macro);
 if (policy) policy.outlook = buildPolicyOutlook(policy, macro);
+const policyAnnouncements = pendingPolicyMoves(macro);
 const backtest = runBacktest(indicators);
 if (policy) console.log(`[static] policy path: ${policy.path.length} contracts, 12m change ${policy.change12mBp}bp`);
 if (backtest) console.log(`[static] backtest: ${backtest.weeks} weeks, active return ${backtest.activeReturnPct}%`);
@@ -132,6 +133,7 @@ const payload = assemblePayload({
   newsAgg,
   newsLLM,
   policy,
+  policyAnnouncements,
   backtest,
   recommendations: result,
   status,
