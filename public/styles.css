@@ -109,7 +109,7 @@ h2 { font-size: 16px; margin-bottom: 12px; }
 }
 
 /* Regime */
-.regime-row { display: grid; grid-template-columns: 1.2fr 2fr; gap: 14px; }
+.regime-row { display: grid; grid-template-columns: 1.2fr 2fr; gap: 14px; align-items: start; }
 @media (max-width: 1000px) { .regime-row { grid-template-columns: 1fr; } }
 
 .regime-label { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
@@ -120,14 +120,16 @@ h2 { font-size: 16px; margin-bottom: 12px; }
 .regime-signals { font-size: 12px; color: var(--muted); }
 .regime-signals li { margin-left: 16px; }
 
-.gauges { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.gauge { background: var(--panel2); border-radius: 8px; padding: 8px 10px; }
+/* flex-wrap (not grid) so a partial last row still stretches to fill the
+   width instead of leaving empty grid tracks */
+.gauges { display: flex; flex-wrap: wrap; gap: 10px; }
+.gauge { flex: 1 1 150px; background: var(--panel2); border-radius: 8px; padding: 8px 10px; }
 .gauge .g-name { font-size: 11px; color: var(--muted); }
 .gauge .g-val { font-size: 17px; font-weight: 700; }
 .gauge .g-chg { font-size: 12px; }
 
 /* Central banks & inflation */
-.policy-row { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; }
+.policy-row { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; align-items: start; }
 .policy-wide { grid-column: 1 / -1; }
 @media (max-width: 1000px) { .policy-row { grid-template-columns: 1fr; } }
 
@@ -159,11 +161,11 @@ h2 { font-size: 16px; margin-bottom: 12px; }
 .pb-track { flex: 1; height: 8px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
 .pb-fill { height: 100%; background: var(--blue); border-radius: 4px; }
 .pb-val { width: 48px; text-align: right; font-variant-numeric: tabular-nums; }
-.infl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.infl-grid { display: flex; flex-wrap: wrap; gap: 10px; }
 .infl-note { margin-top: 10px; }
 
 /* Backtest */
-.bt-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px; }
+.bt-stats { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
 .bt-curve { background: var(--panel2); border-radius: 8px; padding: 6px 8px; margin-bottom: 10px; }
 .bt-curve .sparkline { height: 46px; margin-top: 0; }
 .bt-caveats { list-style: none; font-size: 11.5px; color: var(--muted); }
@@ -238,8 +240,8 @@ h2 { font-size: 16px; margin-bottom: 12px; }
 /* Markets */
 .mkt-group { margin-bottom: 16px; }
 .mkt-group h3 { font-size: 13.5px; color: var(--purple); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .6px; }
-.mkt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
-.mkt-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.mkt-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.mkt-card { flex: 1 1 210px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
 .mkt-head { display: flex; justify-content: space-between; align-items: baseline; }
 .mkt-name { font-size: 12px; font-weight: 600; }
 .mkt-sym { font-size: 10.5px; color: var(--muted); }
@@ -253,8 +255,8 @@ h2 { font-size: 16px; margin-bottom: 12px; }
 /* Macro */
 .macro-group { margin-bottom: 16px; }
 .macro-group h3 { font-size: 13.5px; color: var(--amber); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .6px; }
-.macro-grid-inner { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
-.macro-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.macro-grid-inner { display: flex; flex-wrap: wrap; gap: 10px; }
+.macro-card { flex: 1 1 230px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
 .macro-name { font-size: 12px; color: var(--muted); }
 .macro-val { font-size: 18px; font-weight: 700; }
 .macro-meta { font-size: 11px; color: var(--muted); }
@@ -306,11 +308,9 @@ footer { padding: 16px 22px 30px; color: var(--muted); font-size: 11.5px; max-wi
 
   h2 { font-size: 14.5px; }
 
-  .gauges { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
-  .mkt-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-  .macro-grid-inner { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-  .infl-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
-  .bt-stats { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  .gauges { gap: 8px; }
+  .gauge { flex-basis: 110px; }
+  .mkt-card, .macro-card { flex-basis: 150px; }
 
   /* Recommendation tables become stacked cards: one card per exposure,
      fields rearranged via CSS grid areas instead of table columns. */
