@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Global Market &amp; Macro Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>Global Market &amp; Macro Dashboard</h1>
+      <span class="subtitle">Allocation tilts vs MSCI ACWI &middot; regions / sectors / asset classes &middot; never single stocks</span>
+    </div>
+    <div class="topbar-right">
+      <span id="mode-badge" class="badge"></span>
+      <span id="refresh-info" class="muted"></span>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="Dashboard sections"></nav>
+
+  <div class="compliance-banner">
+    <strong>Compliance notice:</strong> Informational/educational only — not investment advice.
+    Tilt changes that would imply an opposite-way trade are locked for 30 days
+    (<span class="lock-chip-demo">&#128274; locked</span>). Designed for low-turnover, monthly-at-most rebalancing.
+    Always preclear personal trades with your compliance team before acting.
+  </div>
+
+  <main id="app">
+    <div class="loading" id="loading">Loading market data&hellip;</div>
+
+    <section id="regime-section" class="hidden">
+      <div class="regime-row">
+        <div class="card regime-card" id="regime-card"></div>
+        <div class="card gauges-card" id="gauges-card"></div>
+      </div>
+    </section>
+
+    <section id="policy-section" class="hidden">
+      <h2>Central Banks &amp; Inflation</h2>
+      <div class="policy-row">
+        <div class="card" id="policy-card"></div>
+        <div class="card" id="stance-card"></div>
+        <div class="card policy-wide" id="inflation-card"></div>
+      </div>
+    </section>
+
+    <section id="reco-section" class="hidden">
+      <h2>Recommended Tilts <span class="muted small">(vs MSCI ACWI baseline &middot; scores in [-1, +1])</span></h2>
+      <div id="reco-groups"></div>
+    </section>
+
+    <section id="backtest-section" class="hidden">
+      <h2>Engine Backtest <span class="muted small">(walk-forward replay of the market signals)</span></h2>
+      <div class="card" id="backtest-card"></div>
+    </section>
+
+    <section id="markets-section" class="hidden">
+      <h2>Markets</h2>
+      <div id="markets-groups"></div>
+    </section>
+
+    <section id="macro-section" class="hidden">
+      <h2>Macro <span class="muted small">(FRED, ONS, ECB, BoE)</span></h2>
+      <div id="macro-grid"></div>
+    </section>
+
+    <section id="news-section" class="hidden">
+      <h2>Top News <span class="muted small" id="news-sentiment"></span></h2>
+      <div class="news-ai hidden" id="news-ai"></div>
+      <ul class="news-list" id="news-list"></ul>
+    </section>
+
+    <section id="log-section" class="hidden">
+      <h2>Tilt Change Log <span class="muted small">(audit trail backing the 30-day lock)</span></h2>
+      <ul class="tilt-log" id="tilt-log"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      Data: Yahoo Finance (delayed quotes), FRED, public RSS feeds. Rules-based signals:
+      45% relative momentum, 20% trend, 25% macro-regime fit, 10% news sentiment.
+      This tool cannot know your personal circumstances; nothing here is a recommendation to buy or sell any security.
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
