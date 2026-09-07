@@ -444,7 +444,7 @@ function renderLog(p) {
 
 function renderStatus(p) {
   const badge = $('mode-badge');
-  badge.textContent = p.mode !== 'live' ? 'DEMO DATA' : p.hosted ? 'LIVE · 10-MIN SNAPSHOTS' : 'LIVE DATA';
+  badge.textContent = p.mode !== 'live' ? 'DEMO DATA' : p.hosted ? 'LIVE · 30-MIN SNAPSHOTS' : 'LIVE DATA';
   badge.className = `badge ${p.mode === 'live' ? 'live' : 'mock'}`;
   const errs = Object.entries(p.status || {})
     .filter(([, s]) => s.lastError)
