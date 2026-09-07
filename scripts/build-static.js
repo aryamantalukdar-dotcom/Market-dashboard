@@ -27,6 +27,7 @@ const MOCK = process.env.MOCK === '1';
 
 let history = {};
 let log = [];
+let prevInstruments = {};
 const prevUrls = [];
 if (process.env.PREVIOUS_DATA_URL) prevUrls.push(process.env.PREVIOUS_DATA_URL);
 if (process.env.GITHUB_REPOSITORY) {
@@ -47,7 +48,8 @@ if (!MOCK) {
       const prev = await res.json();
       history = prev.tiltState?.history || {};
       log = prev.tiltState?.log || [];
-      console.log(`[static] loaded previous tilt state (${Object.keys(history).length} keys, ${log.length} log entries)`);
+      prevInstruments = prev.instruments || {};
+      console.log(`[static] loaded previous snapshot (${Object.keys(history).length} tilt keys, ${log.length} log entries, ${Object.keys(prevInstruments).length} instruments)`);
       break;
     } catch (err) {
       console.log(`[static] previous snapshot unreachable at ${prevUrl} (${err.message})`);
@@ -94,12 +96,37 @@ if (MOCK) {
   }
 }
 
-// Refuse to publish an empty/broken snapshot — failing keeps the previous
-// deployment live.
+// Yahoo and Stooq both rate-limit GitHub Actions runner IPs, and how much gets
+// through varies wildly run to run (62, 41, 1). Rather than abort — which
+// leaves an increasingly stale snapshot live and reports the deploy as broken —
+// carry the previous snapshot's prices forward for whatever this run missed.
+// Carried instruments keep their original updatedAt so the UI ages them.
+const fresh = indicators.size;
+let carried = 0;
+if (!MOCK) {
+  for (const [symbol, prev] of Object.entries(prevInstruments)) {
+    if (indicators.has(symbol)) continue;
+    // Strip the static config fields assemblePayload re-attaches, and the
+    // full closes array never shipped in the payload (the backtest skips
+    // instruments without it).
+    const { key, name, symbol: _s, group, acwiWeight, ...ind } = prev;
+    if (!Number.isFinite(ind.price)) continue;
+    indicators.set(symbol, ind);
+    carried++;
+  }
+  if (carried) console.warn(`[static] carried ${carried} instruments forward from the previous snapshot`);
+}
+
+// Only refuse to publish when there is genuinely nothing to show — i.e. a
+// failed fetch with no previous snapshot to fall back on.
 if (indicators.size < 20) {
-  console.error(`[static] only ${indicators.size} instruments fetched — aborting so the previous snapshot stays live`);
+  console.error(`[static] only ${indicators.size} instruments available (${fresh} fresh, ${carried} carried) — aborting so the previous snapshot stays live`);
   process.exit(1);
 }
+if (fresh < 20) {
+  status.quotes.lastError = `only ${fresh}/${fresh + carried} instruments refreshed this run — the rest are carried forward from the previous snapshot`;
+}
+console.log(`[static] instruments: ${fresh} fresh, ${carried} carried forward`);
 
 let newsAgg = aggregateSentiment(newsItems);
 // Optional LLM news layer (requires ANTHROPIC_API_KEY; silently skipped otherwise)

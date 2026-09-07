@@ -4,10 +4,13 @@ on:
   push:
     branches: [main]
   schedule:
-    # Refresh the live snapshot every 10 minutes. Offset minutes (rather than
-    # */10) avoid the top-of-hour congestion that causes GitHub's scheduler
-    # to silently skip ticks for "*/N" cron expressions.
-    - cron: "4,14,24,34,44,54 * * * *"
+    # Every 30 minutes. A 10-minute cadence meant ~144 runs/day x 62 symbols
+    # against Yahoo and Stooq from shared GitHub runner IPs, which is what was
+    # exhausting both providers' free rate limits and starving the build of
+    # data. Tilts move monthly at most, so half-hourly prices are ample.
+    # Offset minutes (rather than */30) avoid the top-of-hour congestion that
+    # makes GitHub's scheduler silently skip ticks.
+    - cron: "7,37 * * * *"
   workflow_dispatch:
 
 permissions:
